@@ -1,0 +1,2 @@
+# LineStore-StickerImage-Downloader
+下載LineStore的圖片，並轉為Telegram可使用的格式

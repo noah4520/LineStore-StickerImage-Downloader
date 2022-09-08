@@ -33,6 +33,8 @@ soup = BeautifulSoup(response.text, "lxml")
 
 image_links = []  # 存放連結的迴圈
 
+tempTitle = soup.find("p", {"class": "mdCMN38Item01Ttl"}).text  # 取得貼圖名稱
+
 # 切割字串，有待優化
 for tempStr1 in soup.find_all("span", {"class": "mdCMN09Image FnPreview"}):
     tempStr2 = str(tempStr1).replace("<span class=\"mdCMN09Image FnPreview\" style=\"background-image:url(","")
@@ -44,9 +46,9 @@ for tempStr1 in soup.find_all("span", {"class": "mdCMN09Image FnPreview"}):
 
 if(isNeedChangeSize == True):
     saveFile = "Temp"
-    resizeFile = "Images"
+    resizeFile = tempTitle
 else :
-    saveFile = "Images"
+    saveFile = tempTitle
 
 if(len(image_links) > 0):
     

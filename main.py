@@ -8,25 +8,11 @@ import requests
 # 系統用套件
 import glob
 from PIL import Image
-import shutil
+import re
 
-baseWidth = 0  # 初始化
+baseWidth = 512  # 初始化
 
 input_ID = input("請輸入要下載的LineStore貼圖ID：")
-needChangeSizeInput = input("是否需要調整圖片大小(Y/N)：")
-
-if(needChangeSizeInput == "Y" or needChangeSizeInput == "y"):
-    isNeedChangeSize = False
-
-    while isNeedChangeSize == False:
-        try:
-            baseWidth = int(input("請輸入寬度(px)："))
-            isNeedChangeSize = True
-        except:
-            print("\n輸入寬度有錯，請重新輸入一次\n")
-            isNeedChangeSize = False
-else:
-    isNeedChangeSize = False
 
 response = requests.get(f"https://store.line.me/stickershop/product/{input_ID}/zh-Hant?ref=Desktop")
 soup = BeautifulSoup(response.text, "lxml")
@@ -34,6 +20,10 @@ soup = BeautifulSoup(response.text, "lxml")
 image_links = []  # 存放連結的迴圈
 
 tempTitle = soup.find("p", {"class": "mdCMN38Item01Ttl"}).text  # 取得貼圖名稱
+
+# 正則表達式轉換資料夾標題，防止建立資料夾錯誤
+reg = "[^0-9A-Za-z\u4e00-\u9fa5]"
+tempTitle = re.sub(reg,'',tempTitle) 
 
 # 切割字串，有待優化
 for tempStr1 in soup.find_all("span", {"class": "mdCMN09Image FnPreview"}):
@@ -44,11 +34,7 @@ for tempStr1 in soup.find_all("span", {"class": "mdCMN09Image FnPreview"}):
 
     image_links.append(imgLink[sliceLast])  # 放入陣列
 
-if(isNeedChangeSize == True):
-    saveFile = "Temp"
-    resizeFile = tempTitle
-else :
-    saveFile = tempTitle
+saveFile = tempTitle
 
 if(len(image_links) > 0):
     
@@ -65,29 +51,24 @@ if(len(image_links) > 0):
 
             file.write(img.content)  # 寫入圖片的二進位碼
 
-    if(isNeedChangeSize == True):
+    imgs = glob.glob(f'./{saveFile}/*.png')  # 取得 demo 資料夾內所有的圖片
 
-        imgs = glob.glob(f'./{saveFile}/*.png')  # 取得 demo 資料夾內所有的圖片
+    print("\n圖片大小轉換中，請稍後...\n")
 
-        print("\n圖片大小轉換中，請稍後...\n")
+    for i in imgs:
+        im = Image.open(i)
 
-        for i in imgs:
-            im = Image.open(i)
+        wpercent = (baseWidth / float(im.size[0])) # 計算寬邊的比例
+        hsize = int((float(im.size[1]) * float(wpercent))) # 計算長邊的應有比例
 
-            wpercent = (baseWidth / float(im.size[0])) # 計算寬邊的比例
-            hsize = int((float(im.size[1]) * float(wpercent))) # 計算長邊的應有比例
+        size = im.size
+        name = i.replace(f"./{tempTitle}\\","")
+        im2 = im.resize((baseWidth,hsize), Image.Resampling.LANCZOS) # 調整圖片尺寸
 
-            size = im.size
-            name = i.replace(f"./{saveFile}\\","")
-            im2 = im.resize((baseWidth,hsize), Image.Resampling.LANCZOS) # 調整圖片尺寸
+        if not os.path.exists(f"{saveFile}"):
+            os.mkdir(f"{saveFile}")  # 建立資料夾
 
-            if not os.path.exists(f"{resizeFile}"):
-                os.mkdir(f"{resizeFile}")  # 建立資料夾
-
-            im2.save(f'./{resizeFile}/{name}','png')   # 調整後存檔到 resize 資料夾
-            os.remove(i)
-
-        shutil.rmtree(f"./{saveFile}") # 強制刪除
+        im2.save(f'./{saveFile}/{name}','png')   # 調整後存檔到 resize 資料夾
 
     input("\n下載完成，按下Enter後結束！")
 

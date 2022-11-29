@@ -30,7 +30,7 @@ pip install Pillow
 ```
 
 ## 我想直接使用
-為了使用方便，已透過pyinstaller包裝成exe檔，可直接開啟使用（尚未更新）
+為了使用方便，已透過pyinstaller包裝成exe檔，可直接開啟使用
 
 ```
 StickerImageDownloader.exe

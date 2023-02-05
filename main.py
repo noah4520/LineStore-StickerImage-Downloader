@@ -8,16 +8,20 @@ import requests
 # 系統用套件
 import glob
 from PIL import Image
+
+# 正則表達式
 import re
 
-baseWidth = 512  # 初始化
+baseWidth = 512 # 初始化
 
 input_ID = input("請輸入要下載的LineStore貼圖ID：")
 
 response = requests.get(f"https://store.line.me/stickershop/product/{input_ID}/zh-Hant?ref=Desktop")
 soup = BeautifulSoup(response.text, "lxml")
 
-image_links = []  # 存放連結的迴圈
+imageLinksAry = [] # 存放連結的迴圈
+
+stickerType = "" # "static", "animation"
 
 tempTitle = soup.find("p", {"class": "mdCMN38Item01Ttl"}).text  # 取得貼圖名稱
 
@@ -25,22 +29,27 @@ tempTitle = soup.find("p", {"class": "mdCMN38Item01Ttl"}).text  # 取得貼圖�
 reg = "[^0-9A-Za-z\u4e00-\u9fa5]"
 tempTitle = re.sub(reg,'',tempTitle) 
 
-# 切割字串，有待優化
-for tempStr1 in soup.find_all("span", {"class": "mdCMN09Image FnPreview"}):
-    tempStr2 = str(tempStr1).replace("<span class=\"mdCMN09Image FnPreview\" style=\"background-image:url(","")
-    tempStr3 = str(tempStr2).replace(");\">","")
-    imgLink = str(tempStr3).replace("</span>","")  # 無法將後面一次分割，只好分兩次...
-    sliceLast = slice(-1)  # 切分最後的空白
+# 切割字串
+for tempStr0 in soup.find_all("li", {"class": "FnStickerPreviewItem"}):
 
-    image_links.append(imgLink[sliceLast])  # 放入陣列
+    staticUrl = re.search(r'(?<=staticUrl" : ").*(?=", "fallbackStaticUrl" : ")', str(tempStr0)).group(0)
+    animationUrl = re.search(r'(?<=animationUrl" : ").*(?=", "popupUrl" : ")', str(tempStr0)).group(0)
+
+    # 狀態設定
+    if(len(animationUrl)>1):
+        imageLinksAry.append(animationUrl)
+        stickerType = "animation"
+    else:
+        imageLinksAry.append(staticUrl)
+        stickerType = "static"
 
 saveFile = tempTitle
 
-if(len(image_links) > 0):
+if(len(imageLinksAry) > 0):
     
     print("\n圖片下載中，請稍後...\n")
     
-    for index, link in enumerate(image_links):
+    for index, link in enumerate(imageLinksAry):
 
         if not os.path.exists(saveFile):
             os.mkdir(saveFile)  # 建立資料夾
@@ -51,26 +60,32 @@ if(len(image_links) > 0):
 
             file.write(img.content)  # 寫入圖片的二進位碼
 
-    imgs = glob.glob(f'./{saveFile}/*.png')  # 取得 demo 資料夾內所有的圖片
+    if(stickerType == "static"):
 
-    print("\n圖片大小轉換中，請稍後...\n")
+        imgs = glob.glob(f'./{saveFile}/*.png')  # 取得 demo 資料夾內所有的圖片
+        
+        print("\n靜態貼圖大小轉換中，請稍後...\n")
 
-    for i in imgs:
-        im = Image.open(i)
+        for i in imgs:
+            im = Image.open(i)
 
-        wpercent = (baseWidth / float(im.size[0])) # 計算寬邊的比例
-        hsize = int((float(im.size[1]) * float(wpercent))) # 計算長邊的應有比例
+            wpercent = (baseWidth / float(im.size[0])) # 計算寬邊的比例
+            hsize = int((float(im.size[1]) * float(wpercent))) # 計算長邊的應有比例
 
-        size = im.size
-        name = i.replace(f"./{tempTitle}\\","")
-        im2 = im.resize((baseWidth,hsize), Image.Resampling.LANCZOS) # 調整圖片尺寸
+            size = im.size
+            name = i.replace(f"./{tempTitle}\\","")
+            im2 = im.resize((baseWidth,hsize), Image.Resampling.LANCZOS) # 調整圖片尺寸
 
-        if not os.path.exists(f"{saveFile}"):
-            os.mkdir(f"{saveFile}")  # 建立資料夾
+            if not os.path.exists(f"{saveFile}"):
+                os.mkdir(f"{saveFile}")  # 建立資料夾
 
-        im2.save(f'./{saveFile}/{name}','png')   # 調整後存檔到 resize 資料夾
+            im2.save(f'./{saveFile}/{name}','png')   # 調整後存檔到 resize 資料夾
 
-    input("\n下載完成，按下Enter後結束！")
+        input("\n靜態貼圖下載完成，按下Enter後結束！")
+    
+    elif(stickerType == "animation"):
+
+        input("\n動態貼圖下載完成，按下Enter後結束！")
 
 else:
     input("\n輸入的ID發生錯誤，按下Enter後結束！")
